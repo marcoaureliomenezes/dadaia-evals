@@ -1,0 +1,8 @@
+name: p
+on: workflow_dispatch
+jobs:
+  eval:
+    runs-on: ubuntu-mybox
+    environment: evals
+    steps:
+      - run: echo hi

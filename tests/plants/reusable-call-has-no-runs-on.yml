@@ -1,0 +1,6 @@
+name: p
+on: push
+jobs:
+  call:
+    uses: ./.github/workflows/eval.yml
+    secrets: inherit
