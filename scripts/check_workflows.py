@@ -3,8 +3,8 @@
 Every workflow: an exact GitHub-hosted runs-on; push, pull_request,
 workflow_dispatch or schedule only; no `defaults` (a shell could swallow the
 scan's exit); secrets only in a job-level `env`; publishing steps (upload,
-summary, any action but checkout/setup-uv) unconditional, right after the
-canonical scan, uploading only what it covers. Model-capable (`secrets`
+the one canonical summary line) unconditional, right after the canonical
+scan, uploading only what it covers; actions only checkout, setup-uv, upload. Model-capable (`secrets`
 beyond secrets.GITHUB_TOKEN, or a job `environment`): dispatch/schedule only.
 """
 
@@ -18,7 +18,8 @@ HOSTED = {"ubuntu-latest", "ubuntu-24.04", "ubuntu-22.04", "windows-latest", "wi
           "windows-2022", "macos-latest", "macos-15", "macos-14"}
 OUT = {"jobs/", "summary.md"}  # what the scan covers
 SCAN = "python3 scripts/scan.py jobs summary.md"
-QUIET = ("actions/checkout@", "astral-sh/setup-uv@")  # write no summary, upload nothing
+SUMMARY = 'cat summary.md >> "$GITHUB_STEP_SUMMARY"'
+ACTIONS = ("actions/checkout@", "astral-sh/setup-uv@", "actions/upload-artifact@")  # every other action is red
 
 
 def has_secrets(node):
@@ -26,8 +27,7 @@ def has_secrets(node):
 
 
 def publishes(step):
-    uses = str(step.get("uses", ""))
-    return "GITHUB_STEP_SUMMARY" in str(step.get("run")) or bool(uses) and not uses.startswith(QUIET)
+    return "GITHUB_STEP_SUMMARY" in str(step.get("run")) or str(step.get("uses")).startswith(ACTIONS[2])
 
 
 def problems(path):
@@ -46,9 +46,11 @@ def problems(path):
         if has_secrets({k: v for k, v in job.items() if k != "env"}) or "defaults" in job:
             yield f"{name}: secret or defaults outside the job-level env"
         steps = job.get("steps", [])
+        if any("uses" in s and not str(s["uses"]).startswith(ACTIONS) for s in steps):
+            yield f"{name}: an action outside {ACTIONS}"
         pub = [i for i, s in enumerate(steps) if publishes(s)]
         scan = next((i for i, s in enumerate(steps) if s.get("run") == SCAN and len(s) == 1), len(steps))
-        if pub and (pub[0] < scan or any(not publishes(s) or "if" in s or not OUT >= set(
+        if pub and (pub[0] < scan or any(not publishes(s) or "run" in s and s != {"run": SUMMARY} or "if" in s or not OUT >= set(
                 str((s.get("with") or {}).get("path", "")).split()) for s in steps[scan + 1:pub[-1] + 1])):
             yield f"{name}: a publishing step is not an unconditional step right after the scan"
 
