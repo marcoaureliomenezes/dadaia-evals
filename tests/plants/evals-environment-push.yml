@@ -1,0 +1,15 @@
+name: plant
+on:
+  workflow_dispatch:
+  push:
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    environment: evals
+    steps:
+      - run: python3 scripts/scan.py jobs summary.md
+      - uses: actions/upload-artifact@v4
+        with:
+          path: jobs/

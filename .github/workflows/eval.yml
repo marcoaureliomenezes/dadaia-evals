@@ -1,0 +1,74 @@
+name: eval
+# Model-calling workflow under ADR 0177: dispatch only, GitHub-hosted, the
+# secret at job level in the one job that needs it, scan before any upload.
+on:
+  workflow_dispatch:
+    inputs:
+      lib_ref:
+        description: dadaia-workspace ref to build the candidate wheel from
+        required: true
+permissions:
+  contents: read
+env:
+  BASELINE: "0.4.7"
+  # The one owner of the Claude CLI pin; each task Dockerfile's ARG equals it (tests/test_scripts.py).
+  CLAUDE_CODE_VERSION: 2.1.284
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+
+  eval:
+    needs: check
+    runs-on: ubuntu-24.04
+    environment: evals
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      CLAUDE_FORCE_OAUTH: "1"
+      SCAN_SECRET: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/dadaia-workspace
+          ref: ${{ inputs.lib_ref }}
+          path: lib
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Stamp release-as and build the candidate wheel
+        run: |
+          v=$(python3 -c 'import json; print(json.load(open("lib/release-please-config.json"))["packages"]["."]["release-as"])')
+          sed -i "s/^version = .*/version = \"$v\"/" lib/pyproject.toml
+          uv build --wheel lib -o wheel
+      - run: uv tool install harbor==0.23.0
+      # environment/lib/ is each image's last layer (AGENTS.md, ADR 0179):
+      # requirements.txt names a pinned PyPI release or the wheel beside it.
+      - name: Run on the baseline release
+        run: |
+          for t in tasks/*/; do mkdir -p "$t/environment/lib"; echo "dadaia-workspace==$BASELINE" > "$t/environment/lib/requirements.txt"; done
+          harbor run -p tasks -a claude-code -m anthropic/claude-sonnet-5 --ak version=$CLAUDE_CODE_VERSION -k 3 -n 2 -o jobs/base
+      - name: Run on the candidate wheel
+        run: |
+          w=$(ls wheel/*.whl)
+          for t in tasks/*/; do rm -rf "$t/environment/lib"; mkdir -p "$t/environment/lib"; cp "$w" "$t/environment/lib/"; echo "/lib/$(basename "$w")" > "$t/environment/lib/requirements.txt"; done
+          harbor run -p tasks -a claude-code -m anthropic/claude-sonnet-5 --ak version=$CLAUDE_CODE_VERSION -k 3 -n 2 -o jobs/cand
+      - name: Compare
+        id: compare
+        run: python3 scripts/compare.py jobs/base jobs/cand > summary.md
+        continue-on-error: true
+      - run: python3 scripts/scan.py jobs summary.md
+      - run: cat summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jobs
+          path: |
+            jobs/
+            summary.md
+      - if: steps.compare.outcome == 'failure'
+        run: echo "compare.py blocks" && exit 1

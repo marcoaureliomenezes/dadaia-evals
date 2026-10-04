@@ -1,0 +1,10 @@
+name: p
+on: workflow_dispatch
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    environment: evals
+    steps:
+      - run: python3 scripts/scan.py jobs summary.md
+      - run: cat summary.md >> "$GITHUB_STEP_SUMMARY"
+        working-directory: ../.claude

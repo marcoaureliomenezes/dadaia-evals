@@ -1,0 +1,7 @@
+name: p
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    environment: evals
+    steps:
+      - run: echo hi

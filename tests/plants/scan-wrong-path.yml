@@ -1,0 +1,12 @@
+name: p
+on: workflow_dispatch
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    environment: evals
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - run: python3 scripts/scan.py summary.md
+      - uses: actions/upload-artifact@v4
+        with: {path: jobs/}
