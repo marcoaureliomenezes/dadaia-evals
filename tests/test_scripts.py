@@ -1,8 +1,8 @@
 """The 0177 workflow check, the secret scan and compare.py, through their exit codes."""
 
 import json
-import re
 import os
+import re
 import subprocess
 import sys
 import tempfile
