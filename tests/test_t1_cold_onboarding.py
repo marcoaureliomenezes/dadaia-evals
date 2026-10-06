@@ -77,13 +77,11 @@ HAND = {
 
 
 class ColdOnboarding(unittest.TestCase):
-    @unittest.expectedFailure
     def test_the_grader_passes_a_hand_onboarded_workspace_of_each_version(self):
         for version, script in HAND.items():
             with self.subTest(version):
                 self.assertEqual(reward(T1, version, script), "1")
 
-    @unittest.expectedFailure
     def test_the_grader_fails_an_empty_workspace(self):
         for version in HAND:
             with self.subTest(version):
