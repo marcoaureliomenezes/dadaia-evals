@@ -23,6 +23,7 @@ verify: python3 -m unittest discover -s tests -v
 verify-stage: python3 -m unittest discover -s tests -v
 verify-task: python3 -c "import sys, unittest; sys.exit(not unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests'], exit=False).result.wasSuccessful())"
 tests: tests/** tasks/*/tests/**
+tests-red: ^\s*@unittest\.expectedFailure
 
 ## The model-API law (ADR 0177)
 
