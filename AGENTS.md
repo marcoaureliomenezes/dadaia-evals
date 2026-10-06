@@ -17,6 +17,13 @@
 - Locally: `eval.yml`'s steps that write `environment/lib/` and run `harbor run`, Docker running, with your own `CLAUDE_CODE_OAUTH_TOKEN`; those steps are the one source of the pins and flags.
 - `jobs/` is the run output (trial logs, transcripts): never committed, ignored by `.gitignore`.
 
+## Gate lines (ADR 0207: read from the work branch)
+
+verify: python3 -m unittest discover -s tests -v
+verify-stage: python3 -m unittest discover -s tests -v
+verify-task: python3 -c "import sys, unittest; sys.exit(not unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests'], exit=False).result.wasSuccessful())"
+tests: tests/** tasks/*/tests/**
+
 ## The model-API law (ADR 0177)
 
 - Source: dadaia-workspace `dd-gitflow-default` §3b and ADR 0177; on a difference, that text wins.
