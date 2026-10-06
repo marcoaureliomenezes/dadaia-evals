@@ -14,13 +14,11 @@ def planted(version, *plants):
 
 
 class BlockListBug(unittest.TestCase):
-    @unittest.expectedFailure
     def test_the_planted_correct_fix_passes_on_each_version(self):
         for version in HAND:
             with self.subTest(version):
                 self.assertEqual(planted(version, "correct-fix"), "1")
 
-    @unittest.expectedFailure
     def test_the_planted_assert_rewriting_fix_fails_on_each_version(self):
         for version in HAND:
             with self.subTest(version):
