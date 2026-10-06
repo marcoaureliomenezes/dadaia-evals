@@ -11,5 +11,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The lib the task images' candidate wheel is built from (tests/test_t1_cold_onboarding.py).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/dadaia-workspace
+          path: lib
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       # The 0177 workflow check over this repo and its plants, the scan and compare.py cases.
       - run: python3 -m unittest discover -s tests -v
+        env:
+          DADAIA_WORKSPACE_LIB: ${{ github.workspace }}/lib
