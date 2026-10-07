@@ -12,6 +12,13 @@ def slug(title):
     """The URL slug of `title`: its words, lowercased, joined by "-" (README.md)."""
     return "-".join(title.lower().split())
 EOF
+cat > AGENTS.md <<'EOF'
+# demo
+
+verify: python3 -m unittest discover -s tests
+verify-stage: python3 -m unittest discover -s tests
+verify-task: python3 -c "import sys, unittest; sys.exit(not unittest.main(module=None, argv=['unittest', 'discover', '-s', 'tests'], exit=False).result.wasSuccessful())"
+EOF
 mkdir tests && cat > tests/test_slug.py <<'EOF'
 import unittest
 
